@@ -54,5 +54,13 @@ where = ["src"]
 version_file = "src/tview/_version.py"
 local_scheme = "no-local-version"
 
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+known_third_party = ["matplotlib", "click", "pysam"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

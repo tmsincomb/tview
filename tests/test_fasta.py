@@ -10,18 +10,16 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tview.tview import read_fasta, fasta_panel, render_panels, Panel
+from tview.tview import Panel, fasta_panel, read_fasta, render_panels
 
 from .conftest import OUTPUT_DIR
 
-
 # ── Helpers ───────────────────────────────────────────────────────
+
 
 def _write_fasta(seqs: list[tuple[str, str]]) -> str:
     """Write sequences to a temp FASTA file, return path."""
-    f = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".fasta", delete=False
-    )
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".fasta", delete=False)
     for name, seq in seqs:
         f.write(f">{name}\n{seq}\n")
     f.close()
@@ -264,6 +262,7 @@ class TestRenderPanels:
     def test_dense_nt_alignment(self, tmp_path, output_dir):
         """Dense NT alignment with many mismatches."""
         import random
+
         random.seed(42)
         ref = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT"
         lines = [">ref\n" + ref + "\n"]

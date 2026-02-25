@@ -17,18 +17,54 @@ def _expand_stdin(paths: list[str]) -> list[str]:
 @click.command(
     context_settings={"help_option_names": ["-h", "--help"]},
     epilog="Use '-' to read file paths from stdin, e.g.:\n\n"
-           "  find . -name '*.fasta' | tview --fasta - --palette aa -o out.png",
+    "  find . -name '*.fasta' | tview --fasta - --palette aa -o out.png",
 )
-@click.option("--bam", multiple=True, help="BAM file(s) — each becomes a panel. Use '-' for stdin.")
-@click.option("--ref", type=click.Path(exists=True), help="Reference FASTA (required for BAM mode).")
+@click.option(
+    "--bam",
+    multiple=True,
+    help="BAM file(s) — each becomes a panel. Use '-' for stdin.",
+)
+@click.option(
+    "--ref",
+    type=click.Path(exists=True),
+    help="Reference FASTA (required for BAM mode).",
+)
 @click.option("--region", help="Genomic region chr:start-end (required for BAM mode).")
-@click.option("--fasta", multiple=True, help="Aligned FASTA file(s) — each becomes a panel. Use '-' for stdin.")
-@click.option("--columns", help="Column range for FASTA, 1-based inclusive (e.g. 1-120).")
-@click.option("-o", "--output", default="alignment.png", show_default=True, help="Output image path.")
-@click.option("--palette", type=click.Choice(["nt", "aa"]), default="nt", show_default=True, help="Color palette.")
-@click.option("--dpi", type=int, default=300, show_default=True, help="Image resolution.")
-@click.option("--fontsize", type=int, default=7, show_default=True, help="Base font size in points.")
-@click.option("--cell", type=float, default=0.14, show_default=True, help="Cell size in inches.")
+@click.option(
+    "--fasta",
+    multiple=True,
+    help="Aligned FASTA file(s) — each becomes a panel. Use '-' for stdin.",
+)
+@click.option(
+    "--columns", help="Column range for FASTA, 1-based inclusive (e.g. 1-120)."
+)
+@click.option(
+    "-o",
+    "--output",
+    default="alignment.png",
+    show_default=True,
+    help="Output image path.",
+)
+@click.option(
+    "--palette",
+    type=click.Choice(["nt", "aa"]),
+    default="nt",
+    show_default=True,
+    help="Color palette.",
+)
+@click.option(
+    "--dpi", type=int, default=300, show_default=True, help="Image resolution."
+)
+@click.option(
+    "--fontsize",
+    type=int,
+    default=7,
+    show_default=True,
+    help="Base font size in points.",
+)
+@click.option(
+    "--cell", type=float, default=0.14, show_default=True, help="Cell size in inches."
+)
 def main(bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell):
     """Publication-quality alignment viewer (BAM or FASTA).
 
@@ -58,4 +94,6 @@ def main(bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell)
         for fasta_path in fasta_paths:
             panels.append(fasta_panel(fasta_path, col_start, col_end))
 
-    render_panels(panels, output, fontsize=fontsize, dpi=dpi, palette=palette, cell=cell)
+    render_panels(
+        panels, output, fontsize=fontsize, dpi=dpi, palette=palette, cell=cell
+    )

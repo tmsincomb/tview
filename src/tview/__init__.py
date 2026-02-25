@@ -1,15 +1,15 @@
 """tview — Publication-quality alignment viewer."""
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 from tview.tview import (
+    AA_COLORS,
+    NT_COLORS,
     Panel,
-    fasta_panel,
     bam_panel,
+    fasta_panel,
     read_fasta,
     render_panels,
-    NT_COLORS,
-    AA_COLORS,
 )
 
 try:
