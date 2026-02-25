@@ -30,6 +30,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import matplotlib
 
@@ -93,7 +94,23 @@ CIGAR_SEQ_MISMATCH = 8  # X
 # ======================================================================
 @dataclass
 class Panel:
-    """One horizontal alignment block: a reference row + read/sequence rows."""
+    """One horizontal alignment block: a reference row + read/sequence rows.
+
+    Attributes:
+        label: Display name for the panel (e.g. filename stem).
+        ref_row: Reference sequence as a list of single-character strings.
+        seq_rows: Read/sequence rows as (name, bases, is_reverse) tuples.
+        total_cols: Total number of display columns including insertion columns.
+        col_labels: Tick positions and labels for the x-axis as (column_index, label) pairs.
+        ins_columns: Column indices that represent insertion positions.
+
+    Examples:
+        >>> p = Panel("test", ["A", "C"], [("r1", ["A", "T"], False)], 2, [(0, "1")])
+        >>> p.label
+        'test'
+        >>> p.ins_columns
+        set()
+    """
 
     label: str
     ref_row: list[str]
@@ -111,7 +128,24 @@ class Panel:
 #  FASTA panel builder
 # ======================================================================
 def read_fasta(path: str | Path) -> list[tuple[str, str]]:
-    """Parse FASTA -> list[(name, sequence)]."""
+    """Parse a FASTA file into a list of (name, sequence) tuples.
+
+    Args:
+        path: Path to the FASTA file.
+
+    Returns:
+        List of (header_name, concatenated_sequence) tuples.
+
+    Examples:
+        >>> fasta = tmp_path / "test.fa"
+        >>> _ = fasta.write_text(">seq1\\nACGT\\n>seq2\\nTGCA\\n")
+        >>> read_fasta(fasta)
+        [('seq1', 'ACGT'), ('seq2', 'TGCA')]
+        >>> read_fasta(tmp_path / "empty.fa")
+        Traceback (most recent call last):
+            ...
+        FileNotFoundError: ...
+    """
     seqs: list[tuple[str, str]] = []
     name: str | None = None
     buf: list[str] = []
@@ -134,10 +168,34 @@ def fasta_panel(
     col_start: int | None = None,
     col_end: int | None = None,
 ) -> Panel:
-    """Build a Panel from an aligned FASTA. First sequence = reference.
+    """Build a Panel from an aligned FASTA where the first sequence is the reference.
 
-    col_start / col_end are 1-based inclusive column indices into the
-    alignment (after MAFFT gaps).
+    Args:
+        path: Path to the aligned FASTA file.
+        col_start: 1-based inclusive start column for slicing the alignment.
+        col_end: 1-based inclusive end column for slicing the alignment.
+
+    Returns:
+        A Panel with reference row, sequence rows, and column labels.
+
+    Raises:
+        ValueError: If the FASTA file contains no sequences.
+
+    Examples:
+        >>> fasta = tmp_path / "aln.fa"
+        >>> _ = fasta.write_text(">ref\\nACGT\\n>read1\\nACTT\\n>read2\\nA-GT\\n")
+        >>> p = fasta_panel(fasta)
+        >>> p.ref_row
+        ['A', 'C', 'G', 'T']
+        >>> p.total_cols
+        4
+        >>> len(p.seq_rows)
+        2
+        >>> p.seq_rows[0]
+        ('read1', ['A', 'C', 'T', 'T'], False)
+        >>> p2 = fasta_panel(fasta, col_start=2, col_end=3)
+        >>> p2.ref_row
+        ['C', 'G']
     """
     seqs = read_fasta(path)
     if not seqs:
@@ -178,11 +236,24 @@ def fasta_panel(
 #  BAM panel builder
 # ======================================================================
 def build_read_row(
-    read,
+    read: Any,
     ref_start: int,
     ref_end: int,
 ) -> tuple[dict[int, str], dict[int, list[str]]]:
-    """Extract aligned bases and insertions from a single read."""
+    """Extract aligned bases and insertions from a single pysam read.
+
+    Walks the CIGAR string to map query bases onto reference positions,
+    collecting insertions keyed by their anchor reference position.
+
+    Args:
+        read: A pysam.AlignedSegment with cigartuples and query_sequence.
+        ref_start: 0-based start of the reference window (inclusive).
+        ref_end: 0-based end of the reference window (exclusive).
+
+    Returns:
+        A tuple of (aligned, inserts) where aligned maps ref positions to
+        bases and inserts maps ref positions to lists of inserted bases.
+    """
     aligned: dict[int, str] = {}
     inserts: dict[int, list[str]] = defaultdict(list)
     qpos, rpos = 0, read.reference_start
@@ -212,7 +283,19 @@ def build_read_row(
 
 
 def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
-    """Build a Panel from a BAM file with reference FASTA and genomic region."""
+    """Build a Panel from a BAM file with reference FASTA and genomic region.
+
+    Reads are sorted by start position and strand. Insertion columns are
+    expanded so all reads align on a common grid.
+
+    Args:
+        bam_path: Path to the indexed BAM file.
+        ref_path: Path to the reference FASTA (must be indexed).
+        region: Genomic region string in "chrom:start-end" format (0-based start).
+
+    Returns:
+        A Panel with reference row, read rows, insertion columns, and tick labels.
+    """
     import pysam
 
     chrom, rest = region.split(":")
@@ -293,7 +376,16 @@ def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
 def _resolve_font(
     fontsize: float,
 ) -> tuple[fm.FontProperties, fm.FontProperties]:
-    """Resolve font, preferring Helvetica (macOS), falling back to DejaVu Sans Mono."""
+    """Resolve monospace font for alignment rendering.
+
+    Prefers Helvetica Bold (macOS) and falls back to DejaVu Sans Mono Bold.
+
+    Args:
+        fontsize: Font size in points.
+
+    Returns:
+        A tuple of (mono, mono_sm) FontProperties for base text and tick labels.
+    """
     helv_path = fm.findfont(fm.FontProperties(family="Helvetica", style="normal"))
     if "Helvetica" in helv_path:
         mono = fm.FontProperties(fname=helv_path, size=fontsize, weight="bold")
@@ -325,7 +417,20 @@ def render_panels(
     palette: str = "nt",
     cell: float | None = None,
 ) -> None:
-    """Render alignment panels to an image file."""
+    """Render alignment panels to a publication-quality image file.
+
+    Each panel is drawn as a reference row followed by read rows. Matches
+    are shown as dots (forward) or commas (reverse), mismatches are
+    highlighted with colored backgrounds, and insertion columns are shaded.
+
+    Args:
+        panels: List of Panel objects to render vertically.
+        out_path: Output image path (format inferred from extension).
+        fontsize: Font size in points for base characters.
+        dpi: Output resolution in dots per inch.
+        palette: Color scheme, either ``"nt"`` for nucleotides or ``"aa"`` for amino acids.
+        cell: Cell size in inches. Defaults to fontsize / 72.
+    """
     if cell is None:
         cell = fontsize / 72  # 1 pt = 1/72 inch -> cell fits one character
     colors = AA_COLORS if palette == "aa" else NT_COLORS
@@ -471,7 +576,81 @@ def render_panels(
     print(f"Saved: {out_path} ({dpi} dpi, {len(panels)} panel(s), " f"{max_cols} cols)")
 
 
+# ======================================================================
+#  Doctest infrastructure
+# ======================================================================
+def _run_doctests() -> int:
+    """Run doctests with temporary file fixtures.
+
+    Returns:
+        Exit code: 0 if all pass, 1 if any fail.
+    """
+    import doctest
+    import shutil
+    import sys
+    import tempfile
+
+    tmp_dir = tempfile.mkdtemp()
+    tmp_path = Path(tmp_dir)
+
+    try:
+        globs = {
+            "Path": Path,
+            "tmp_path": tmp_path,
+        }
+        results = doctest.testmod(
+            extraglobs=globs,
+            verbose="-v" in sys.argv,
+            optionflags=doctest.ELLIPSIS,
+        )
+
+        if results.failed == 0:
+            print(f"All {results.attempted} doctests passed.")
+            return 0
+        else:
+            print(f"{results.failed}/{results.attempted} doctests failed.")
+            return 1
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _should_skip_tests() -> bool:
+    """Check if tests should be skipped via flag or env var."""
+    import os
+    import sys
+
+    if "--skip-tests" in sys.argv:
+        sys.argv.remove("--skip-tests")
+        return True
+    if os.environ.get("DOCSTR_SKIP_TEST", "").lower() in ("1", "true", "yes"):
+        return True
+    return False
+
+
+def _wants_test_only() -> bool:
+    """Check if user wants to run tests only (not CLI)."""
+    import sys
+
+    for flag in ("--test", "--tests"):
+        if flag in sys.argv:
+            sys.argv.remove(flag)
+            return True
+    return False
+
+
 if __name__ == "__main__":
+    import sys
+
+    if _wants_test_only():
+        sys.exit(_run_doctests())
+
+    if not _should_skip_tests():
+        exit_code = _run_doctests()
+        if exit_code != 0:
+            print("Aborting: Fix failing doctests before running.")
+            sys.exit(exit_code)
+        print()
+
     from tview.cli import main
 
     main()
