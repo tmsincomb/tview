@@ -222,13 +222,14 @@ def bam_panel(bam_path, ref_path, region) -> Panel:
             c = col_map[rpos]
             if rpos in aligned:
                 row[c] = aligned[rpos]
-            n_ins = max_ins.get(rpos, 0)
-            read_ins = inserts.get(rpos, [])
-            for j in range(n_ins):
-                if j < len(read_ins):
-                    row[c + 1 + j] = read_ins[j]
-                else:
-                    row[c + 1 + j] = "-"
+            if rpos in aligned or rpos in inserts:
+                n_ins = max_ins.get(rpos, 0)
+                read_ins = inserts.get(rpos, [])
+                for j in range(n_ins):
+                    if j < len(read_ins):
+                        row[c + 1 + j] = read_ins[j]
+                    else:
+                        row[c + 1 + j] = "-"
         seq_rows.append((read.query_name, row, read.is_reverse))
 
     # Column labels: 1-based relative, ticks at 1, 10, 20…

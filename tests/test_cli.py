@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from tview.cli import main
@@ -61,6 +62,7 @@ class TestCLI:
 
     def test_mixed_bam_and_fasta(self, write_fasta):
         """BAM + FASTA panels stacked in one figure."""
+        pysam = pytest.importorskip("pysam")  # noqa: F841
         fasta_seqs = [
             ("chr1_ref", "CGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG"),
             ("sample_x", "CGATCAATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG"),

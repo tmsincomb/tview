@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tview"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Publication-quality alignment viewer for nucleotide and amino acid sequences"
 readme = "README.md"
 license = {text = "MIT"}
@@ -30,7 +30,7 @@ classifiers = [
 dependencies = [
     "matplotlib>=3.5",
     "click>=8.0",
-    "pysam>=0.20",
+    "pysam>=0.20; sys_platform != 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +49,9 @@ tview = "tview.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+version_file = "src/tview/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

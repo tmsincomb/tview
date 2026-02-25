@@ -1,4 +1,6 @@
-"""tview-image — Publication-quality alignment viewer."""
+"""tview — Publication-quality alignment viewer."""
+
+from importlib.metadata import version, PackageNotFoundError
 
 from tview.tview import (
     Panel,
@@ -10,7 +12,10 @@ from tview.tview import (
     AA_COLORS,
 )
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("tview")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 __all__ = [
     "Panel",
     "fasta_panel",
