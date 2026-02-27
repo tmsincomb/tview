@@ -1,4 +1,10 @@
-"""tview — Publication-quality alignment viewer."""
+"""tview — Publication-quality alignment viewer.
+
+Examples:
+    >>> import tview
+    >>> hasattr(tview, '__version__')
+    True
+"""
 
 from importlib.metadata import PackageNotFoundError, version
 

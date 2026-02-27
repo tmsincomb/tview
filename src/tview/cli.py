@@ -1,5 +1,7 @@
 """Click CLI for tview."""
 
+from __future__ import annotations
+
 import sys
 
 import click
@@ -10,7 +12,20 @@ from tview.renderer import render_panels
 
 
 def _expand_stdin(paths: list[str]) -> list[str]:
-    """If paths is ['-'], read file paths from stdin (one per line)."""
+    """If paths is ['-'], read file paths from stdin (one per line).
+
+    Args:
+        paths: List of file paths or ['-'] to read from stdin.
+
+    Returns:
+        Expanded list of file paths.
+
+    Examples:
+        >>> _expand_stdin(['file1.fa', 'file2.fa'])
+        ['file1.fa', 'file2.fa']
+        >>> _expand_stdin([])
+        []
+    """
     if paths and len(paths) == 1 and paths[0] == "-":
         return [line.strip() for line in sys.stdin if line.strip()]
     return list(paths)

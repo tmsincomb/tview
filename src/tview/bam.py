@@ -1,4 +1,12 @@
-"""BAM parsing and panel construction."""
+"""BAM parsing and panel construction.
+
+Provides CIGAR-aware alignment extraction and panel building from indexed
+BAM files.  Requires ``pysam`` at runtime (imported lazily in ``bam_panel``).
+
+Examples:
+    >>> CIGAR_MATCH, CIGAR_INS, CIGAR_DEL
+    (0, 1, 2)
+"""
 
 from __future__ import annotations
 

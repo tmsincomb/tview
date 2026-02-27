@@ -2,6 +2,9 @@
 
 All logic has moved to focused modules: models, fasta, bam, renderer.
 This file preserves ``from tview.tview import ...`` for existing code.
+
+Examples:
+    >>> from tview.tview import Panel, read_fasta
 """
 
 from tview.bam import bam_panel, build_read_row  # noqa: F401

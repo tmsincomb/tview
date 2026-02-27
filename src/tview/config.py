@@ -2,6 +2,14 @@
 
 Reads palette.yaml and style.yaml from the package directory and exposes
 backward-compatible module-level constants.
+
+Examples:
+    >>> palette = load_palette()
+    >>> sorted(palette.keys()) == ['amino_acid', 'nucleotide', 'rendering']
+    True
+    >>> style = load_style()
+    >>> sorted(style.keys()) == ['alpha', 'font']
+    True
 """
 
 from __future__ import annotations
@@ -21,9 +29,15 @@ def load_palette() -> dict[str, Any]:
 
     Returns:
         Parsed YAML dict with ``nucleotide``, ``amino_acid``, and ``rendering`` keys.
+
+    Examples:
+        >>> palette = load_palette()
+        >>> 'A' in palette['nucleotide']
+        True
+        >>> 'mismatch_bg' in palette['rendering']
+        True
     """
-    with open(_PKG_DIR / "palette.yaml") as fh:
-        return yaml.safe_load(fh)
+    return yaml.safe_load((_PKG_DIR / "palette.yaml").read_text())
 
 
 @lru_cache(maxsize=1)
@@ -32,9 +46,15 @@ def load_style() -> dict[str, Any]:
 
     Returns:
         Parsed YAML dict with ``alpha`` and ``font`` keys.
+
+    Examples:
+        >>> style = load_style()
+        >>> 0.0 <= style['alpha']['forward'] <= 1.0
+        True
+        >>> isinstance(style['font']['preferences'], list)
+        True
     """
-    with open(_PKG_DIR / "style.yaml") as fh:
-        return yaml.safe_load(fh)
+    return yaml.safe_load((_PKG_DIR / "style.yaml").read_text())
 
 
 # -- Backward-compatible constants -----------------------------------------

@@ -1,4 +1,12 @@
-"""FASTA parsing and panel construction."""
+"""FASTA parsing and panel construction.
+
+Parses simple FASTA files and builds alignment ``Panel`` objects where the
+first sequence is treated as the reference row.
+
+Examples:
+    >>> from pathlib import Path
+    >>> from tview.fasta import read_fasta, fasta_panel
+"""
 
 from __future__ import annotations
 
@@ -17,11 +25,13 @@ def read_fasta(path: str | Path) -> list[tuple[str, str]]:
         List of (header_name, concatenated_sequence) tuples.
 
     Examples:
-        >>> fasta = tmp_path / "test.fa"
+        >>> import tempfile; from pathlib import Path
+        >>> d = Path(tempfile.mkdtemp())
+        >>> fasta = d / "test.fa"
         >>> _ = fasta.write_text(">seq1\\nACGT\\n>seq2\\nTGCA\\n")
         >>> read_fasta(fasta)
         [('seq1', 'ACGT'), ('seq2', 'TGCA')]
-        >>> read_fasta(tmp_path / "empty.fa")
+        >>> read_fasta(d / "empty.fa")
         Traceback (most recent call last):
             ...
         FileNotFoundError: ...
@@ -62,7 +72,9 @@ def fasta_panel(
         ValueError: If the FASTA file contains no sequences.
 
     Examples:
-        >>> fasta = tmp_path / "aln.fa"
+        >>> import tempfile; from pathlib import Path
+        >>> d = Path(tempfile.mkdtemp())
+        >>> fasta = d / "aln.fa"
         >>> _ = fasta.write_text(">ref\\nACGT\\n>read1\\nACTT\\n>read2\\nA-GT\\n")
         >>> p = fasta_panel(fasta)
         >>> p.ref_row

@@ -20,10 +20,13 @@ from .conftest import OUTPUT_DIR
 
 
 def _write_fasta(seqs: list[tuple[str, str]]) -> str:
-    """Write sequences to a temp FASTA file, return path."""
+    """Write sequences to a temp FASTA file, return path.
+
+    Uses NamedTemporaryFile for Hypothesis compatibility (no tmp_path fixture).
+    """
+    lines = "".join(f">{name}\n{seq}\n" for name, seq in seqs)
     f = tempfile.NamedTemporaryFile(mode="w", suffix=".fasta", delete=False)
-    for name, seq in seqs:
-        f.write(f">{name}\n{seq}\n")
+    f.write(lines)
     f.close()
     return f.name
 

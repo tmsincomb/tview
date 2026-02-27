@@ -1,4 +1,12 @@
-"""Data structures for tview alignment panels."""
+"""Data structures for tview alignment panels.
+
+Examples:
+    >>> p = Panel("demo", ["A", "C", "G"], [], 3, [(0, "1")])
+    >>> p.label
+    'demo'
+    >>> p.ins_columns
+    set()
+"""
 
 from __future__ import annotations
 

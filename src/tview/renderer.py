@@ -55,13 +55,9 @@ def _resolve_font(
         fm.FontProperties(family="monospace", weight="bold", style="normal")
     )
     if "Oblique" in mono_bold_path or "Italic" in mono_bold_path:
-        import glob as _gl
-
-        candidates = _gl.glob(
-            str(Path(fm.findfont("monospace")).parent / FONT_FALLBACK_FILENAME)
-        )
-        if candidates:
-            mono_bold_path = candidates[0]
+        fallback = Path(fm.findfont("monospace")).parent / FONT_FALLBACK_FILENAME
+        if fallback.exists():
+            mono_bold_path = str(fallback)
 
     mono = fm.FontProperties(fname=mono_bold_path, size=fontsize)
     mono_sm = fm.FontProperties(fname=mono_bold_path, size=fontsize)
