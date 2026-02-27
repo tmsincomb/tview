@@ -12,7 +12,7 @@ from tview.bam import bam_panel
 from tview.config import AA_COLORS, NT_COLORS
 from tview.fasta import fasta_panel, read_fasta
 from tview.models import Panel
-from tview.renderer import render_panels
+from tview.renderer import draw_panels, panel_figsize, render_panels
 
 try:
     __version__ = version("tview")
@@ -24,6 +24,8 @@ __all__ = [
     "bam_panel",
     "read_fasta",
     "render_panels",
+    "draw_panels",
+    "panel_figsize",
     "NT_COLORS",
     "AA_COLORS",
 ]

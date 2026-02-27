@@ -9,6 +9,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from tview.config import (
     AA_COLORS,
@@ -64,32 +65,86 @@ def _resolve_font(
     return mono, mono_sm
 
 
-def render_panels(
+def panel_figsize(
     panels: list[Panel],
-    out_path: str | Path = "alignment.png",
     fontsize: float = 12,
-    dpi: int = 600,
+    cell: float | None = None,
+) -> tuple[float, float]:
+    """Compute recommended figure size for a set of alignment panels.
+
+    Useful when creating external figures or patchworklib Bricks that need
+    to match the natural size of the alignment rendering.
+
+    Args:
+        panels: List of Panel objects to measure.
+        fontsize: Font size in points for base characters.
+        cell: Cell size in inches. Defaults to fontsize / 72.
+
+    Returns:
+        A (width, height) tuple in inches.
+
+    Examples:
+        >>> from tview.models import Panel
+        >>> p = Panel("t", list("ACGT"), [("s1", list("ACGT"), False)], 4, [(0, "1")])
+        >>> w, h = panel_figsize([p])
+        >>> w >= 4
+        True
+    """
+    if cell is None:
+        cell = fontsize / 72
+    max_cols = max(p.total_cols for p in panels)
+    total_rows = 0
+    for i, p in enumerate(panels):
+        total_rows += 1 + len(p.seq_rows)
+        if i < len(panels) - 1:
+            total_rows += 1
+    fig_w = max(4, max_cols * cell + 0.5)
+    fig_h = max(1.0, total_rows * cell + 0.6)
+    return (fig_w, fig_h)
+
+
+def draw_panels(
+    panels: list[Panel],
+    ax: Axes,
+    fontsize: float = 12,
     palette: str = "nt",
     cell: float | None = None,
     classic: bool = False,
-) -> None:
-    """Render alignment panels to a publication-quality image file.
+) -> Axes:
+    """Draw alignment panels onto the given axes.
 
-    Each panel is drawn as a reference row followed by read rows. Matches
-    are shown as dots (forward) or commas (reverse), mismatches are
-    highlighted with colored backgrounds, and insertion columns are shaded.
+    Draws reference rows, sequence rows, mismatch highlights, insertion
+    column shading, panel labels, separator lines, and tick configuration
+    onto *ax*. The caller is responsible for figure creation and saving.
+
+    Compatible with any ``matplotlib.axes.Axes`` subclass, including
+    ``patchworklib.Brick`` objects and standard subplot axes.
 
     Args:
         panels: List of Panel objects to render vertically.
-        out_path: Output image path (format inferred from extension).
+        ax: Matplotlib axes (or compatible subclass) to draw on.
         fontsize: Font size in points for base characters.
-        dpi: Output resolution in dots per inch.
         palette: Color scheme, either ``"nt"`` for nucleotides or ``"aa"`` for amino acids.
         cell: Cell size in inches. Defaults to fontsize / 72.
         classic: When True, render in black-and-white with no color highlighting.
+
+    Returns:
+        The axes object (same as *ax*), for method chaining.
+
+    Examples:
+        >>> import matplotlib
+        >>> matplotlib.use("Agg")
+        >>> import matplotlib.pyplot as plt
+        >>> from tview.models import Panel
+        >>> fig, ax = plt.subplots(figsize=(4, 1))
+        >>> p = Panel("t", list("ACGT"), [("s1", list("ACGT"), False)], 4, [(0, "1")])
+        >>> result = draw_panels([p], ax)
+        >>> result is ax
+        True
+        >>> plt.close(fig)
     """
     if cell is None:
-        cell = fontsize / 72  # 1 pt = 1/72 inch -> cell fits one character
+        cell = fontsize / 72
     colors = AA_COLORS if palette == "aa" else NT_COLORS
 
     if classic:
@@ -101,7 +156,6 @@ def render_panels(
         ins_bg = INS_BG
     mono, mono_sm = _resolve_font(fontsize)
 
-    # Compute total height: for each panel, 1 ref row + N seq rows + separator
     max_cols = max(p.total_cols for p in panels)
     total_rows = 0
     panel_y_offsets: list[int] = []
@@ -111,9 +165,6 @@ def render_panels(
         if i < len(panels) - 1:
             total_rows += 1
 
-    fig_w = max(4, max_cols * cell + 0.5)
-    fig_h = max(1.0, total_rows * cell + 0.6)
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     ax.set_xlim(-0.5, max_cols - 0.5)
     ax.set_ylim(total_rows - 0.5, -0.5)
     ax.set_aspect("equal")
@@ -228,6 +279,41 @@ def render_panels(
     for spine in ax.spines.values():
         spine.set_visible(False)
 
+    return ax
+
+
+def render_panels(
+    panels: list[Panel],
+    out_path: str | Path = "alignment.png",
+    fontsize: float = 12,
+    dpi: int = 600,
+    palette: str = "nt",
+    cell: float | None = None,
+    classic: bool = False,
+) -> None:
+    """Render alignment panels to a publication-quality image file.
+
+    Convenience wrapper around :func:`draw_panels` that handles figure
+    creation, layout adjustment, and file saving.
+
+    Each panel is drawn as a reference row followed by read rows. Matches
+    are shown as dots (forward) or commas (reverse), mismatches are
+    highlighted with colored backgrounds, and insertion columns are shaded.
+
+    Args:
+        panels: List of Panel objects to render vertically.
+        out_path: Output image path (format inferred from extension).
+        fontsize: Font size in points for base characters.
+        dpi: Output resolution in dots per inch.
+        palette: Color scheme, either ``"nt"`` for nucleotides or ``"aa"`` for amino acids.
+        cell: Cell size in inches. Defaults to fontsize / 72.
+        classic: When True, render in black-and-white with no color highlighting.
+    """
+    fig_w, fig_h = panel_figsize(panels, fontsize, cell)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    draw_panels(
+        panels, ax, fontsize=fontsize, palette=palette, cell=cell, classic=classic
+    )
     plt.subplots_adjust(left=0.01, right=0.99, top=0.92, bottom=0.01)
     plt.savefig(
         out_path,
@@ -238,4 +324,5 @@ def render_panels(
         transparent=False,
     )
     plt.close()
-    print(f"Saved: {out_path} ({dpi} dpi, {len(panels)} panel(s), " f"{max_cols} cols)")
+    max_cols = max(p.total_cols for p in panels)
+    print(f"Saved: {out_path} ({dpi} dpi, {len(panels)} panel(s), {max_cols} cols)")

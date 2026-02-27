@@ -168,6 +168,57 @@ render_panels([panel], "classic.png", palette="aa", classic=True)
 
 ---
 
+## Composing with patchworklib
+
+`draw_panels()` and `panel_figsize()` let you draw alignments onto any
+matplotlib axes, including [patchworklib](https://github.com/ponnhide/patchworklib)
+`Brick` objects for composing multi-panel figures.
+
+```bash
+pip install patchworklib
+# or
+pip install tview[compose]
+```
+
+```python
+import patchworklib as pw
+from tview import fasta_panel, draw_panels, panel_figsize
+
+# Build alignment panel
+panel = fasta_panel("aligned.fasta", col_start=1, col_end=120)
+w, h = panel_figsize([panel], fontsize=7, cell=0.14)
+
+# Draw onto a patchworklib Brick
+alignment = pw.Brick(label="alignment", figsize=(w, h))
+draw_panels([panel], ax=alignment, fontsize=7, palette="aa", cell=0.14)
+
+# Compose with other plots
+scatter = pw.Brick(label="scatter", figsize=(3, 3))
+scatter.scatter([1, 2, 3], [4, 5, 6])
+
+layout = alignment / scatter   # vertical stack
+layout.savefig("composed.png")
+```
+
+This also works with standard matplotlib subplots:
+
+```python
+import matplotlib.pyplot as plt
+from tview import fasta_panel, draw_panels, panel_figsize
+
+panel = fasta_panel("aligned.fasta")
+w, h = panel_figsize([panel])
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(w + 4, max(h, 3)))
+
+draw_panels([panel], ax1, palette="aa")
+ax2.scatter([1, 2, 3], [4, 5, 6])
+
+plt.tight_layout()
+plt.savefig("side_by_side.png", dpi=300, bbox_inches="tight")
+```
+
+---
+
 ## Visual Conventions
 
 | Element | Symbol | Style |

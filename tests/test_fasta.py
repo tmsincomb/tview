@@ -6,6 +6,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import matplotlib
+import matplotlib.pyplot as plt
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -305,6 +307,274 @@ class TestRenderPanels:
 
 
 # ── Panel dataclass sanity ────────────────────────────────────────
+
+
+class TestDrawPanels:
+    """Tests for draw_panels() function."""
+
+    def test_draws_on_provided_axes(self, tmp_path):
+        """draw_panels returns the same axes object it was given."""
+        from tview.renderer import draw_panels
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGT\n>s1\nACGA\n")
+        panel = fasta_panel(str(f))
+        fig, ax = plt.subplots(figsize=(4, 1))
+        result = draw_panels([panel], ax)
+        assert result is ax
+        plt.close(fig)
+
+    def test_axes_limits_set_correctly(self, tmp_path):
+        """draw_panels sets xlim and ylim based on panel dimensions."""
+        from tview.renderer import draw_panels
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n>s2\nACGTACGA\n")
+        panel = fasta_panel(str(f))
+        fig, ax = plt.subplots(figsize=(4, 2))
+        draw_panels([panel], ax)
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        assert xlim == (-0.5, 7.5)
+        assert ylim[0] > ylim[1]  # y is inverted
+        plt.close(fig)
+
+    def test_no_file_created(self, tmp_path):
+        """draw_panels does not create any files."""
+        from tview.renderer import draw_panels
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGT\n>s1\nACGA\n")
+        panel = fasta_panel(str(f))
+        fig, ax = plt.subplots(figsize=(4, 1))
+        files_before = set(tmp_path.iterdir())
+        draw_panels([panel], ax)
+        files_after = set(tmp_path.iterdir())
+        assert files_before == files_after
+        plt.close(fig)
+
+    def test_classic_mode(self, tmp_path):
+        """draw_panels with classic=True does not crash."""
+        from tview.renderer import draw_panels
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGT\n>s1\nACGA\n")
+        panel = fasta_panel(str(f))
+        fig, ax = plt.subplots(figsize=(4, 1))
+        result = draw_panels([panel], ax, classic=True)
+        assert result is ax
+        plt.close(fig)
+
+    def test_aa_palette(self, tmp_path):
+        """draw_panels with palette='aa' does not crash."""
+        from tview.renderer import draw_panels
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nMRVK\n>s1\nMRGK\n")
+        panel = fasta_panel(str(f))
+        fig, ax = plt.subplots(figsize=(4, 1))
+        result = draw_panels([panel], ax, palette="aa")
+        assert result is ax
+        plt.close(fig)
+
+    def test_stacked_panels(self, tmp_path):
+        """draw_panels with multiple panels on a single external axes."""
+        from tview.renderer import draw_panels, panel_figsize
+
+        f1 = tmp_path / "g1.fasta"
+        f2 = tmp_path / "g2.fasta"
+        f1.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n")
+        f2.write_text(">ref\nACGTACGT\n>s2\nACGTACGA\n")
+        p1 = fasta_panel(str(f1))
+        p2 = fasta_panel(str(f2))
+        w, h = panel_figsize([p1, p2])
+        fig, ax = plt.subplots(figsize=(w, h))
+        result = draw_panels([p1, p2], ax)
+        assert result is ax
+        plt.close(fig)
+
+    @given(aligned_nt_seqs(min_seqs=2, max_seqs=6, min_len=10, max_len=50))
+    @settings(max_examples=10, deadline=30000)
+    def test_no_crash_hypothesis(self, seqs):
+        """Rendering random NT alignments onto external axes does not crash."""
+        from tview.renderer import draw_panels, panel_figsize
+
+        fasta_path = _write_fasta(seqs)
+        try:
+            panel = fasta_panel(fasta_path)
+            w, h = panel_figsize([panel])
+            fig, ax = plt.subplots(figsize=(w, h))
+            result = draw_panels([panel], ax)
+            assert result is ax
+            plt.close(fig)
+        finally:
+            Path(fasta_path).unlink(missing_ok=True)
+
+    def test_savefig_after_draw(self, tmp_path, output_dir):
+        """draw_panels output can be saved manually by the caller."""
+        from tview.renderer import draw_panels, panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n")
+        panel = fasta_panel(str(f))
+        w, h = panel_figsize([panel])
+        fig, ax = plt.subplots(figsize=(w, h))
+        draw_panels([panel], ax)
+        out = output_dir / "draw_panels_manual_save.png"
+        fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+
+class TestPanelFigsize:
+    """Tests for panel_figsize() function."""
+
+    def test_returns_tuple(self, tmp_path):
+        """panel_figsize returns a (width, height) tuple."""
+        from tview.renderer import panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGT\n>s1\nACGA\n")
+        panel = fasta_panel(str(f))
+        result = panel_figsize([panel])
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert all(isinstance(v, (int, float)) for v in result)
+
+    def test_minimum_width(self, tmp_path):
+        """Figure width is at least 4 inches."""
+        from tview.renderer import panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nAC\n>s1\nAC\n")
+        panel = fasta_panel(str(f))
+        w, _h = panel_figsize([panel])
+        assert w >= 4
+
+    def test_minimum_height(self, tmp_path):
+        """Figure height is at least 1.0 inches."""
+        from tview.renderer import panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nAC\n>s1\nAC\n")
+        panel = fasta_panel(str(f))
+        _w, h = panel_figsize([panel])
+        assert h >= 1.0
+
+    def test_wider_alignment_larger_width(self, tmp_path):
+        """Wider alignments produce wider figure sizes."""
+        from tview.renderer import panel_figsize
+
+        short = tmp_path / "short.fasta"
+        short.write_text(">ref\nACGT\n>s1\nACGA\n")
+        long_ = tmp_path / "long.fasta"
+        long_.write_text(
+            ">ref\nACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n"
+            ">s1\nACGTACGTACGTACGTACGTACGTACGTACGTACGTACGA\n"
+        )
+        p_short = fasta_panel(str(short))
+        p_long = fasta_panel(str(long_))
+        w_short, _ = panel_figsize([p_short], cell=0.2)
+        w_long, _ = panel_figsize([p_long], cell=0.2)
+        assert w_long > w_short
+
+    def test_consistent_with_render_panels(self, tmp_path):
+        """panel_figsize produces the same dimensions render_panels would compute."""
+        from tview.renderer import panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n")
+        panel = fasta_panel(str(f))
+        w, h = panel_figsize([panel], fontsize=12, cell=None)
+        cell = 12 / 72
+        max_cols = panel.total_cols
+        total_rows = 1 + len(panel.seq_rows)
+        expected_w = max(4, max_cols * cell + 0.5)
+        expected_h = max(1.0, total_rows * cell + 0.6)
+        assert w == pytest.approx(expected_w)
+        assert h == pytest.approx(expected_h)
+
+
+try:
+    import patchworklib  # noqa: F401
+
+    _has_patchworklib = True
+except ImportError:
+    _has_patchworklib = False
+
+
+@pytest.mark.skipif(not _has_patchworklib, reason="patchworklib not installed")
+class TestPatchworklib:
+    """Integration tests using patchworklib Bricks."""
+
+    def test_draw_on_brick(self, tmp_path, output_dir):
+        """draw_panels renders onto a patchworklib Brick."""
+        import patchworklib as pw
+
+        from tview.renderer import draw_panels, panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n>s2\nACGTACGA\n")
+        panel = fasta_panel(str(f))
+        w, h = panel_figsize([panel], fontsize=7, cell=0.14)
+        brick = pw.Brick(label="alignment", figsize=(w, h))
+        result = draw_panels([panel], ax=brick, fontsize=7, cell=0.14)
+        assert result is brick
+        out = output_dir / "patchworklib_single_brick.png"
+        brick.savefig(out, dpi=150)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_compose_vertical(self, tmp_path, output_dir):
+        """Two tview Bricks composed vertically with / operator."""
+        import patchworklib as pw
+
+        from tview.renderer import draw_panels, panel_figsize
+
+        f1 = tmp_path / "g1.fasta"
+        f2 = tmp_path / "g2.fasta"
+        f1.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n")
+        f2.write_text(">ref\nACGTACGT\n>s2\nACGTACGA\n")
+        p1 = fasta_panel(str(f1))
+        p2 = fasta_panel(str(f2))
+
+        w1, h1 = panel_figsize([p1], fontsize=7, cell=0.14)
+        brick1 = pw.Brick(label="group1", figsize=(w1, h1))
+        draw_panels([p1], ax=brick1, fontsize=7, cell=0.14)
+
+        w2, h2 = panel_figsize([p2], fontsize=7, cell=0.14)
+        brick2 = pw.Brick(label="group2", figsize=(w2, h2))
+        draw_panels([p2], ax=brick2, fontsize=7, cell=0.14)
+
+        layout = brick1 / brick2
+        out = output_dir / "patchworklib_vertical.png"
+        layout.savefig(out, dpi=150)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_compose_with_matplotlib(self, tmp_path, output_dir):
+        """tview Brick composed horizontally with a plain matplotlib Brick."""
+        import patchworklib as pw
+
+        from tview.renderer import draw_panels, panel_figsize
+
+        f = tmp_path / "test.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGT\n")
+        panel = fasta_panel(str(f))
+        w, h = panel_figsize([panel], fontsize=7, cell=0.14)
+
+        alignment = pw.Brick(label="aln", figsize=(w, h))
+        draw_panels([panel], ax=alignment, fontsize=7, cell=0.14)
+
+        scatter = pw.Brick(label="scatter", figsize=(3, 3))
+        scatter.scatter([1, 2, 3], [4, 5, 6])
+
+        layout = alignment | scatter
+        out = output_dir / "patchworklib_mixed.png"
+        layout.savefig(out, dpi=150)
+        assert out.exists()
+        assert out.stat().st_size > 0
 
 
 class TestPanel:
