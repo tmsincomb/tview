@@ -60,6 +60,18 @@ tview \
   -o first_120_cols.png
 ```
 
+### Classic (black-and-white) mode
+
+Use `--classic-mode` for textbook-style monochrome output — all black text on a white background with no colored highlighting. Structural conventions (`.` `,` lowercase, `-`) are preserved.
+
+```bash
+tview \
+  --fasta aligned.fasta \
+  --palette aa \
+  --classic-mode \
+  -o classic_output.png
+```
+
 ---
 
 ## Stacking Multiple Panels
@@ -145,6 +157,10 @@ panels = [
     bam_panel("sample2.bam", "ref.fa", "chr1:100-200"),
 ]
 render_panels(panels, "stacked.png", dpi=300, fontsize=7, cell=0.14)
+
+# Classic (black-and-white) mode
+panel = fasta_panel("aligned.fasta")
+render_panels([panel], "classic.png", palette="aa", classic=True)
 ```
 
 ---
@@ -205,6 +221,7 @@ Options:
   --dpi INTEGER            Image resolution.  [default: 300]
   --fontsize INTEGER       Base font size in points.  [default: 7]
   --cell FLOAT             Cell size in inches.  [default: 0.14]
+  --classic-mode           Black-and-white rendering with no color highlighting.
   -h, --help               Show this message and exit.
 ```
 
@@ -220,6 +237,7 @@ Options:
 | `--dpi` | Image resolution | `300` |
 | `--fontsize` | Base font size in points | `7` |
 | `--cell` | Cell size in inches (controls spacing) | `0.14` |
+| `--classic-mode` | Black-and-white rendering with no color highlighting | `False` |
 
 ---
 
@@ -230,6 +248,7 @@ Options:
 - Use `--fontsize 5` or `6` when displaying wide alignments (>100 columns).
 - The output format is determined by the file extension: `.png`, `.pdf`, `.svg` all work.
 - For Nature-style figures, `.pdf` or `.svg` output preserves vector text.
+- Use `--classic-mode` for textbook-style monochrome figures that reproduce well in grayscale print.
 
 ```bash
 # Vector output for publication

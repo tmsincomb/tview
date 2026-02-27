@@ -67,7 +67,15 @@ def _expand_stdin(paths: list[str]) -> list[str]:
 @click.option(
     "--cell", type=float, default=0.14, show_default=True, help="Cell size in inches."
 )
-def main(bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell):
+@click.option(
+    "--classic-mode",
+    is_flag=True,
+    default=False,
+    help="Black-and-white rendering with no color highlighting.",
+)
+def main(
+    bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell, classic_mode
+):
     """Publication-quality alignment viewer (BAM or FASTA).
 
     Supports BAM files (with reference FASTA), pre-aligned FASTA (e.g. MAFFT
@@ -97,5 +105,11 @@ def main(bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell)
             panels.append(fasta_panel(fasta_path, col_start, col_end))
 
     render_panels(
-        panels, output, fontsize=fontsize, dpi=dpi, palette=palette, cell=cell
+        panels,
+        output,
+        fontsize=fontsize,
+        dpi=dpi,
+        palette=palette,
+        cell=cell,
+        classic=classic_mode,
     )

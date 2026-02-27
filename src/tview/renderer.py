@@ -75,6 +75,7 @@ def render_panels(
     dpi: int = 600,
     palette: str = "nt",
     cell: float | None = None,
+    classic: bool = False,
 ) -> None:
     """Render alignment panels to a publication-quality image file.
 
@@ -89,10 +90,19 @@ def render_panels(
         dpi: Output resolution in dots per inch.
         palette: Color scheme, either ``"nt"`` for nucleotides or ``"aa"`` for amino acids.
         cell: Cell size in inches. Defaults to fontsize / 72.
+        classic: When True, render in black-and-white with no color highlighting.
     """
     if cell is None:
         cell = fontsize / 72  # 1 pt = 1/72 inch -> cell fits one character
     colors = AA_COLORS if palette == "aa" else NT_COLORS
+
+    if classic:
+        colors = {k: "#000000" for k in colors}
+        mismatch_bg = "#FFFFFF00"
+        ins_bg = "#FFFFFF00"
+    else:
+        mismatch_bg = MISMATCH_BG
+        ins_bg = INS_BG
     mono, mono_sm = _resolve_font(fontsize)
 
     # Compute total height: for each panel, 1 ref row + N seq rows + separator
@@ -123,7 +133,7 @@ def render_panels(
                     (ic - 0.5, y0 - 0.5),
                     1,
                     n_panel_rows,
-                    facecolor=INS_BG,
+                    facecolor=ins_bg,
                     edgecolor="none",
                     zorder=0,
                 )
@@ -175,7 +185,7 @@ def render_panels(
                             (c - 0.5, y - 0.5),
                             1,
                             1,
-                            facecolor=MISMATCH_BG,
+                            facecolor=mismatch_bg,
                             edgecolor="none",
                         )
                     )
