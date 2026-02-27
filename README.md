@@ -4,13 +4,13 @@ Publication-quality alignment viewer for nucleotide and amino acid sequences. A 
 
 Supports **BAM files** (with reference FASTA), **pre-aligned FASTA** (e.g. MAFFT output), and **stacking** multiple inputs into a single figure.
 
-![BAM with indels](examples/indel_alignment.png)
+![BAM with indels](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/indel_alignment.png)
 *BAM mode — SNP (yellow), 3bp deletion, 2bp insertion (purple columns), reverse-strand insertion*
 
-![FASTA amino acid alignment](examples/fasta_env_1-120.png)
+![FASTA amino acid alignment](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/fasta_env_1-120.png)
 *FASTA mode — HIV Env protein alignment (HxB2 reference), amino acid palette*
 
-![Stacked BAMs](examples/stacked_bam.png)
+![Stacked BAMs](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/stacked_bam.png)
 *Stacked mode — two BAM files sharing a reference and region*
 
 ---

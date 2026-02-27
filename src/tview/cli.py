@@ -4,7 +4,9 @@ import sys
 
 import click
 
-from tview.tview import bam_panel, fasta_panel, render_panels
+from tview.bam import bam_panel
+from tview.fasta import fasta_panel
+from tview.renderer import render_panels
 
 
 def _expand_stdin(paths: list[str]) -> list[str]:

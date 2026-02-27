@@ -10,7 +10,9 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tview.tview import Panel, fasta_panel, read_fasta, render_panels
+from tview.fasta import fasta_panel, read_fasta
+from tview.models import Panel
+from tview.renderer import render_panels
 
 from .conftest import OUTPUT_DIR
 
