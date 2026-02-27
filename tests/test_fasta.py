@@ -128,17 +128,45 @@ class TestFastaPanel:
     @given(aligned_nt_seqs(min_seqs=2, max_seqs=5, min_len=20, max_len=80))
     @settings(max_examples=15)
     def test_column_slicing(self, seqs):
-        """Column slicing produces correct subset width."""
+        """Column slicing with contiguous range produces correct subset width."""
         path = _write_fasta(seqs)
         try:
             aln_len = len(seqs[0][1])
-            col_start, col_end = 1, min(10, aln_len)
-            panel = fasta_panel(path, col_start=col_start, col_end=col_end)
-            expected_len = col_end - col_start + 1
-            assert panel.total_cols == expected_len
-            assert len(panel.ref_row) == expected_len
+            col_end = min(10, aln_len)
+            cols = list(range(1, col_end + 1))
+            panel = fasta_panel(path, columns=cols)
+            assert panel.total_cols == len(cols)
+            assert len(panel.ref_row) == len(cols)
         finally:
             Path(path).unlink(missing_ok=True)
+
+    def test_discrete_column_selection(self, tmp_path):
+        """Discrete column positions select only those columns."""
+        path = tmp_path / "disc.fasta"
+        path.write_text(">ref\nABCDEFGHIJ\n>s1\nabcdefghij\n")
+        panel = fasta_panel(str(path), columns=[1, 5, 10])
+        assert panel.total_cols == 3
+        assert panel.ref_row == ["A", "E", "J"]
+        _, row, _ = panel.seq_rows[0]
+        assert row == ["A", "E", "J"]
+
+    def test_mixed_range_and_discrete(self, tmp_path):
+        """Mixed ranges and discrete positions produce correct width."""
+        path = tmp_path / "mixed.fasta"
+        path.write_text(">ref\nABCDEFGHIJKL\n>s1\nabcdefghijkl\n")
+        # columns 1-4, 8, 12 → 6 columns total
+        cols = [1, 2, 3, 4, 8, 12]
+        panel = fasta_panel(str(path), columns=cols)
+        assert panel.total_cols == 6
+        assert panel.ref_row == ["A", "B", "C", "D", "H", "L"]
+
+    def test_out_of_range_columns_ignored(self, tmp_path):
+        """Column positions beyond sequence length are silently ignored."""
+        path = tmp_path / "short.fasta"
+        path.write_text(">ref\nACGT\n>s1\nACGA\n")
+        panel = fasta_panel(str(path), columns=[1, 2, 100])
+        assert panel.total_cols == 2
+        assert panel.ref_row == ["A", "C"]
 
     def test_mismatch_detection(self, tmp_path):
         """Mismatches are preserved in seq_rows."""

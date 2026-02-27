@@ -55,15 +55,15 @@ def read_fasta(path: str | Path) -> list[tuple[str, str]]:
 
 def fasta_panel(
     path: str | Path,
-    col_start: int | None = None,
-    col_end: int | None = None,
+    columns: list[int] | None = None,
 ) -> Panel:
     """Build a Panel from an aligned FASTA where the first sequence is the reference.
 
     Args:
         path: Path to the aligned FASTA file.
-        col_start: 1-based inclusive start column for slicing the alignment.
-        col_end: 1-based inclusive end column for slicing the alignment.
+        columns: Sorted list of 1-based alignment column positions to include.
+            Supports discrete positions, contiguous ranges, or any mix.
+            When ``None``, all columns are included.
 
     Returns:
         A Panel with reference row, sequence rows, and column labels.
@@ -85,7 +85,7 @@ def fasta_panel(
         2
         >>> p.seq_rows[0]
         ('read1', ['A', 'C', 'T', 'T'], False)
-        >>> p2 = fasta_panel(fasta, col_start=2, col_end=3)
+        >>> p2 = fasta_panel(fasta, columns=[2, 3])
         >>> p2.ref_row
         ['C', 'G']
     """
@@ -95,12 +95,13 @@ def fasta_panel(
 
     _ref_name, ref_seq = seqs[0]
 
-    # Slice columns if requested (1-based inclusive)
-    if col_start is not None or col_end is not None:
-        cs = (col_start or 1) - 1
-        ce = col_end or len(ref_seq)
-        ref_seq = ref_seq[cs:ce]
-        seqs = [(n, s[cs:ce]) for n, s in seqs]
+    # Select columns if requested (1-based positions → 0-based indices)
+    orig_positions: list[int] | None = None
+    if columns is not None:
+        indices = sorted(i - 1 for i in columns if 1 <= i <= len(ref_seq))
+        ref_seq = "".join(ref_seq[i] for i in indices)
+        seqs = [(n, "".join(s[i] for i in indices if i < len(s))) for n, s in seqs]
+        orig_positions = [i + 1 for i in indices]
 
     aln_len = len(ref_seq)
     ref_row = list(ref_seq.upper())
@@ -111,14 +112,21 @@ def fasta_panel(
         row += ["-"] * (aln_len - len(row))
         seq_rows.append((name, row, False))
 
-    # Column labels: 1-based position in the reference (skip gap columns)
+    # Column labels
     col_labels: list[tuple[int, str]] = []
-    ref_pos = 0
-    for i, base in enumerate(ref_row):
-        if base != "-":
-            ref_pos += 1
-            if ref_pos == 1 or ref_pos % 10 == 0:
-                col_labels.append((i, str(ref_pos)))
+    if orig_positions is not None:
+        # Label with original alignment positions
+        for i, pos in enumerate(orig_positions):
+            if i == 0 or pos % 10 == 0:
+                col_labels.append((i, str(pos)))
+    else:
+        # Default: 1-based reference position (skip gap columns)
+        ref_pos = 0
+        for i, base in enumerate(ref_row):
+            if base != "-":
+                ref_pos += 1
+                if ref_pos == 1 or ref_pos % 10 == 0:
+                    col_labels.append((i, str(ref_pos)))
 
     label = Path(path).stem
     return Panel(label, ref_row, seq_rows, aln_len, col_labels)

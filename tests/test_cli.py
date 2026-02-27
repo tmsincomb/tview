@@ -66,6 +66,48 @@ class TestCLI:
         assert result.exit_code == 0
         assert out.exists()
 
+    def test_fasta_with_discrete_columns(self, write_fasta):
+        seqs = [("ref", "ACGTACGTACGT"), ("s1", "ACCTACGTACGT")]
+        fasta_path = write_fasta(seqs)
+        out = OUTPUT_DIR / "cli_columns_discrete.png"
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "--fasta",
+                str(fasta_path),
+                "--columns",
+                "1,3,5,7",
+                "-o",
+                str(out),
+                "--dpi",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0
+        assert out.exists()
+
+    def test_fasta_with_mixed_columns(self, write_fasta):
+        seqs = [("ref", "ACGTACGTACGT"), ("s1", "ACCTACGTACGT")]
+        fasta_path = write_fasta(seqs)
+        out = OUTPUT_DIR / "cli_columns_mixed.png"
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "--fasta",
+                str(fasta_path),
+                "--columns",
+                "1-4,8,12",
+                "-o",
+                str(out),
+                "--dpi",
+                "150",
+            ],
+        )
+        assert result.exit_code == 0
+        assert out.exists()
+
     def test_bam_without_ref_errors(self):
         runner = CliRunner()
         result = runner.invoke(

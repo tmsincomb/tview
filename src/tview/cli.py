@@ -11,6 +11,41 @@ from tview.fasta import fasta_panel
 from tview.renderer import render_panels
 
 
+def parse_columns(columns: str) -> list[int]:
+    """Parse column spec into sorted 1-based positions.
+
+    Supports individual positions, ranges, and mixed:
+      '5,40,690'    → [5, 40, 690]
+      '1-120'       → [1, 2, ..., 120]
+      '5,10-20,40'  → [5, 10, 11, ..., 20, 40]
+
+    Args:
+        columns: Comma-separated column spec string.
+
+    Returns:
+        Sorted, deduplicated list of 1-based column positions.
+
+    Examples:
+        >>> parse_columns('5,40,690')
+        [5, 40, 690]
+        >>> parse_columns('1-5')
+        [1, 2, 3, 4, 5]
+        >>> parse_columns('5,10-12,40')
+        [5, 10, 11, 12, 40]
+    """
+    positions: set[int] = set()
+    for part in columns.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            start, end = part.split("-", 1)
+            positions.update(range(int(start), int(end) + 1))
+        else:
+            positions.add(int(part))
+    return sorted(positions)
+
+
 def _expand_stdin(paths: list[str]) -> list[str]:
     """If paths is ['-'], read file paths from stdin (one per line).
 
@@ -53,7 +88,8 @@ def _expand_stdin(paths: list[str]) -> list[str]:
     help="Aligned FASTA file(s) — each becomes a panel. Use '-' for stdin.",
 )
 @click.option(
-    "--columns", help="Column range for FASTA, 1-based inclusive (e.g. 1-120)."
+    "--columns",
+    help="Column positions for FASTA, 1-based (e.g. 1-120, 5,40,690, or 5,10-20,40).",
 )
 @click.option(
     "-o",
@@ -111,13 +147,9 @@ def main(
             panels.append(bam_panel(bam_path, ref, region))
 
     if fasta_paths:
-        col_start, col_end = None, None
-        if columns:
-            parts = columns.replace(",", "").split("-")
-            col_start = int(parts[0])
-            col_end = int(parts[1]) if len(parts) > 1 else None
+        cols = parse_columns(columns) if columns else None
         for fasta_path in fasta_paths:
-            panels.append(fasta_panel(fasta_path, col_start, col_end))
+            panels.append(fasta_panel(fasta_path, columns=cols))
 
     render_panels(
         panels,
