@@ -2,15 +2,11 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from tview.tview import (
-    AA_COLORS,
-    NT_COLORS,
-    Panel,
-    bam_panel,
-    fasta_panel,
-    read_fasta,
-    render_panels,
-)
+from tview.bam import bam_panel
+from tview.config import AA_COLORS, NT_COLORS
+from tview.fasta import fasta_panel, read_fasta
+from tview.models import Panel
+from tview.renderer import render_panels
 
 try:
     __version__ = version("tview")

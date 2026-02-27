@@ -1,0 +1,11 @@
+alpha:
+  forward: 1.0
+  reverse: 0.85
+
+font:
+  preferences:
+    - family: "Helvetica"
+      weight: "bold"
+    - family: "monospace"
+      weight: "bold"
+  fallback_filename: "DejaVuSansMono-Bold.ttf"

@@ -10,7 +10,9 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tview.tview import Panel, fasta_panel, read_fasta, render_panels
+from tview.fasta import fasta_panel, read_fasta
+from tview.models import Panel
+from tview.renderer import render_panels
 
 from .conftest import OUTPUT_DIR
 
@@ -277,6 +279,26 @@ class TestRenderPanels:
         out = output_dir / "dense_nt_mismatches.png"
         render_panels([panel], str(out), palette="nt", dpi=150)
         assert out.exists()
+
+    def test_classic_mode_nt(self, tmp_path, output_dir):
+        """Classic mode renders black-and-white NT alignment without crashing."""
+        f = tmp_path / "classic_nt.fasta"
+        f.write_text(">ref\nACGTACGT\n>s1\nACCTACGA\n>s2\nACGTACGT\n")
+        panel = fasta_panel(str(f))
+        out = output_dir / "classic_mode_nt.png"
+        render_panels([panel], str(out), palette="nt", dpi=150, classic=True)
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_classic_mode_aa(self, tmp_path, output_dir):
+        """Classic mode renders black-and-white AA alignment without crashing."""
+        f = tmp_path / "classic_aa.fasta"
+        f.write_text(">ref\nMRVKEKYQ\n>s1\nMRVGEKYQ\n>s2\nMRVKDKYQ\n")
+        panel = fasta_panel(str(f))
+        out = output_dir / "classic_mode_aa.png"
+        render_panels([panel], str(out), palette="aa", dpi=150, classic=True)
+        assert out.exists()
+        assert out.stat().st_size > 0
 
 
 # ── Panel dataclass sanity ────────────────────────────────────────
