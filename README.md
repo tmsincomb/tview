@@ -13,6 +13,9 @@ Supports **BAM files** (with reference FASTA), **pre-aligned FASTA** (e.g. MAFFT
 ![Stacked BAMs](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/stacked_bam.png)
 *Stacked mode — two BAM files sharing a reference and region*
 
+![Classic mode](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/fasta_env_classic.png)
+*Classic mode — black-and-white rendering for textbook-style figures and grayscale print*
+
 ---
 
 ## Installation
