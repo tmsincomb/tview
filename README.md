@@ -147,7 +147,7 @@ The core functions are available as a Python library:
 from tview import fasta_panel, bam_panel, render_panels
 
 # FASTA alignment
-panel = fasta_panel("aligned.fasta", col_start=1, col_end=120)
+panel = fasta_panel("aligned.fasta", columns=list(range(1, 121)))
 render_panels([panel], "output.png", palette="aa")
 
 # BAM alignment
@@ -185,7 +185,7 @@ import patchworklib as pw
 from tview import fasta_panel, draw_panels, panel_figsize
 
 # Build alignment panel
-panel = fasta_panel("aligned.fasta", col_start=1, col_end=120)
+panel = fasta_panel("aligned.fasta", columns=list(range(1, 121)))
 w, h = panel_figsize([panel], fontsize=7, cell=0.14)
 
 # Draw onto a patchworklib Brick

@@ -7,13 +7,32 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linters
+        run: pip install black isort
+
+      - name: Check formatting (black)
+        run: black --check src/ tests/
+
+      - name: Check import order (isort)
+        run: isort --check src/ tests/
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.13"]
+        python-version: ["3.9", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4

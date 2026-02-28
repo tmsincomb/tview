@@ -607,6 +607,6 @@ class TestPatchworklib:
 
 class TestPanel:
     def test_defaults(self):
-        p = Panel("test", ["A", "C"], [], 2, [], ins_columns=None)
+        p = Panel("test", ["A", "C"], [], 2, [])
         assert p.ins_columns == set()
         assert p.label == "test"

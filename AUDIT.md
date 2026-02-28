@@ -257,30 +257,20 @@ For an open-source project, adding basic contribution guidelines (how to run tes
 
 ---
 
-## 7. Summary of Actionable Findings
+## 7. Summary of Findings — All Resolved
 
-### Must Fix (Bugs)
+All findings have been addressed. The table below tracks each item and its resolution.
 
-| # | File | Issue | Severity |
-|---|------|-------|----------|
-| 1 | `README.md:150,188` | Python API examples use `col_start`/`col_end` — parameters don't exist | Medium |
-| 2 | `renderer.py:191,215` | Gaps use `TEXT_COLOR` (black) instead of `GAP_COLOR` (grey) | Low |
-
-### Should Fix
-
-| # | File | Issue | Severity |
-|---|------|-------|----------|
-| 3 | Tests | No dedicated `test_bam.py` for CIGAR parsing logic | Medium |
-| 4 | `ci.yml` | No linting step (`black --check`, `isort --check`) | Low |
-| 5 | `pyproject.toml:45-47` | Homepage URL points to `MurrellGroup/tview`, not `tmsincomb/tview` | Low |
-| 6 | `README.md:180` | `pip install tview[compose]` extra doesn't exist | Low |
-| 7 | `renderer.py:328` | `print()` should be `logging.info()` for library use | Low |
-
-### Nice to Have
-
-| # | File | Issue | Severity |
-|---|------|-------|----------|
-| 8 | `renderer.py:50-52` | `mono_sm` is identical to `mono` — should differ | Very Low |
-| 9 | `.gitignore` | ~~Add `tests/output/` to prevent accidental commits~~ Clarified — intentionally tracked; comment added | Resolved |
-| 10 | `ci.yml:15` | Add Python 3.12 to CI matrix | Very Low |
-| 11 | `models.py:41` | Use `field(default_factory=set)` instead of `None` + `__post_init__` | Very Low |
+| # | File | Issue | Resolution |
+|---|------|-------|------------|
+| 1 | `README.md` | Python API examples use `col_start`/`col_end` — params don't exist | Fixed: updated to use `columns=list(range(1, 121))` |
+| 2 | `renderer.py` | Gaps use `TEXT_COLOR` (black) instead of `GAP_COLOR` (grey) | Fixed: imported `GAP_COLOR` and applied to gap rendering |
+| 3 | Tests | No dedicated `test_bam.py` for CIGAR parsing logic | Fixed: added `test_bam.py` with 17 tests (12 unit + 5 integration) |
+| 4 | `ci.yml` | No linting step (`black --check`, `isort --check`) | Fixed: added `lint` job to CI workflow |
+| 5 | `pyproject.toml` | Homepage URL points to `MurrellGroup/tview` | Fixed: updated to `tmsincomb/tview` |
+| 6 | `pyproject.toml` | `pip install tview[compose]` extra doesn't exist | Fixed: added `[compose]` extra, moved `patchworklib` from core deps |
+| 7 | `renderer.py` | `print()` should be `logging.info()` for library use | Fixed: replaced with `logging.getLogger(__name__).info()` |
+| 8 | `renderer.py` | `mono_sm` is identical to `mono` — should differ | Fixed: `mono_sm` now uses `fontsize * 0.8` for tick labels |
+| 9 | `.gitignore` | `tests/output/` tracking unclear | Clarified: added comment explaining intentional tracking |
+| 10 | `ci.yml` | Only Python 3.9 and 3.13 in CI matrix | Fixed: added Python 3.12 to matrix |
+| 11 | `models.py` | `ins_columns` uses `None` + `__post_init__` | Fixed: replaced with `field(default_factory=set)` |
