@@ -145,11 +145,9 @@ The docstring for `read_fasta` shows a `FileNotFoundError` doctest, but there's 
 
 Font resolution has multiple fallback branches (`renderer.py:45-65`) but no tests for when preferred fonts aren't available.
 
-#### MINOR: Test output directory committed to git?
+#### CLARIFIED: Test output directory is intentionally tracked
 
-`conftest.py` creates `tests/output/` and tests write artifacts there. This directory doesn't appear in `.gitignore`. If test artifacts are committed, they bloat the repo; if not, the `mkdir` in `conftest.py` handles it at runtime.
-
-**Fix:** Add `tests/output/` to `.gitignore` to prevent accidental commits of rendered test images.
+`conftest.py` creates `tests/output/` and tests write artifacts there. This directory is **intentionally tracked** in version control so users can browse example rendered output without running the tests. A clarifying comment has been added to `.gitignore` to prevent future confusion.
 
 ---
 
@@ -283,6 +281,6 @@ For an open-source project, adding basic contribution guidelines (how to run tes
 | # | File | Issue | Severity |
 |---|------|-------|----------|
 | 8 | `renderer.py:50-52` | `mono_sm` is identical to `mono` — should differ | Very Low |
-| 9 | `.gitignore` | Add `tests/output/` to prevent accidental commits | Very Low |
+| 9 | `.gitignore` | ~~Add `tests/output/` to prevent accidental commits~~ Clarified — intentionally tracked; comment added | Resolved |
 | 10 | `ci.yml:15` | Add Python 3.12 to CI matrix | Very Low |
 | 11 | `models.py:41` | Use `field(default_factory=set)` instead of `None` + `__post_init__` | Very Low |
