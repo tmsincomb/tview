@@ -32,19 +32,21 @@ dependencies = [
     "click>=8.0",
     "pyyaml>=6.0",
     "pysam>=0.20; sys_platform != 'win32'",
-    "patchworklib>=0.6",
 ]
 
 [project.optional-dependencies]
+compose = [
+    "patchworklib>=0.6",
+]
 dev = [
     "pytest>=7.0",
     "hypothesis>=6.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/MurrellGroup/tview"
-Repository = "https://github.com/MurrellGroup/tview"
-Issues = "https://github.com/MurrellGroup/tview/issues"
+Homepage = "https://github.com/tmsincomb/tview"
+Repository = "https://github.com/tmsincomb/tview"
+Issues = "https://github.com/tmsincomb/tview/issues"
 
 [project.scripts]
 tview = "tview.cli:main"
