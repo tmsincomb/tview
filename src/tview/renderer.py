@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import matplotlib
@@ -17,6 +18,7 @@ from tview.config import (
     FONT_FALLBACK_FILENAME,
     FONT_PREFERENCES,
     FWD_ALPHA,
+    GAP_COLOR,
     INS_BG,
     MISMATCH_BG,
     NT_COLORS,
@@ -48,7 +50,9 @@ def _resolve_font(
         found_path = fm.findfont(fm.FontProperties(family=family, style="normal"))
         if family in found_path:
             mono = fm.FontProperties(fname=found_path, size=fontsize, weight=weight)
-            mono_sm = fm.FontProperties(fname=found_path, size=fontsize, weight=weight)
+            mono_sm = fm.FontProperties(
+                fname=found_path, size=fontsize * 0.8, weight=weight
+            )
             return mono, mono_sm
 
     # Final fallback: probe for the fallback font file
@@ -61,7 +65,7 @@ def _resolve_font(
             mono_bold_path = str(fallback)
 
     mono = fm.FontProperties(fname=mono_bold_path, size=fontsize)
-    mono_sm = fm.FontProperties(fname=mono_bold_path, size=fontsize)
+    mono_sm = fm.FontProperties(fname=mono_bold_path, size=fontsize * 0.8)
     return mono, mono_sm
 
 
@@ -188,7 +192,7 @@ def draw_panels(
 
         # Reference row
         for c, base in enumerate(panel.ref_row):
-            clr = TEXT_COLOR if base == "-" else colors.get(base, FALLBACK_BASE_COLOR)
+            clr = GAP_COLOR if base == "-" else colors.get(base, FALLBACK_BASE_COLOR)
             ax.text(
                 c, y0, base, ha="center", va="center", fontproperties=mono, color=clr
             )
@@ -212,7 +216,7 @@ def draw_panels(
                         ha="center",
                         va="center",
                         fontproperties=mono,
-                        color=TEXT_COLOR,
+                        color=GAP_COLOR,
                         alpha=alpha,
                     )
                 elif base == ref_base:
@@ -325,4 +329,7 @@ def render_panels(
     )
     plt.close()
     max_cols = max(p.total_cols for p in panels)
-    print(f"Saved: {out_path} ({dpi} dpi, {len(panels)} panel(s), {max_cols} cols)")
+    log = logging.getLogger(__name__)
+    log.info(
+        "Saved: %s (%d dpi, %d panel(s), %d cols)", out_path, dpi, len(panels), max_cols
+    )

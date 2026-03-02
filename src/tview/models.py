@@ -38,8 +38,4 @@ class Panel:
     seq_rows: list[tuple[str, list[str], bool]]
     total_cols: int
     col_labels: list[tuple[int, str]]
-    ins_columns: set[int] | None = None
-
-    def __post_init__(self) -> None:
-        if self.ins_columns is None:
-            self.ins_columns = set()
+    ins_columns: set[int] = field(default_factory=set)
