@@ -114,6 +114,8 @@ def draw_panels(
     palette: str = "nt",
     cell: float | None = None,
     classic: bool = False,
+    show_row_labels: bool = False,
+    row_label_width: float = 8.0,
 ) -> Axes:
     """Draw alignment panels onto the given axes.
 
@@ -169,7 +171,8 @@ def draw_panels(
         if i < len(panels) - 1:
             total_rows += 1
 
-    ax.set_xlim(-0.5, max_cols - 0.5)
+    left_pad = -row_label_width if show_row_labels else -0.5
+    ax.set_xlim(left_pad, max_cols - 0.5)
     ax.set_ylim(total_rows - 0.5, -0.5)
     ax.set_aspect("equal")
 
@@ -231,6 +234,13 @@ def draw_panels(
                         alpha=alpha,
                     )
                 else:
+                    sec_ref = panel.secondary_ref_row
+                    is_heterologous = (
+                        not classic
+                        and sec_ref is not None
+                        and c < len(sec_ref)
+                        and base == sec_ref[c]
+                    )
                     ax.add_patch(
                         plt.Rectangle(
                             (c - 0.5, y - 0.5),
@@ -241,6 +251,11 @@ def draw_panels(
                         )
                     )
                     display = base.lower() if is_rev else base
+                    letter_color = (
+                        panel.heterologous_color
+                        if is_heterologous
+                        else colors.get(base, TEXT_COLOR)
+                    )
                     ax.text(
                         c,
                         y,
@@ -248,12 +263,13 @@ def draw_panels(
                         ha="center",
                         va="center",
                         fontproperties=mono,
-                        color=colors.get(base, TEXT_COLOR),
+                        color=letter_color,
                         alpha=alpha,
+                        fontweight="bold" if is_heterologous else "normal",
                     )
 
-        # Panel label (left side)
-        if len(panels) > 1:
+        # Panel label (left side) — only when not showing per-row labels
+        if len(panels) > 1 and not show_row_labels:
             ax.text(
                 -1.5,
                 y0 + n_panel_rows / 2 - 0.5,
@@ -263,6 +279,30 @@ def draw_panels(
                 fontproperties=mono,
                 color=PANEL_LABEL_COLOR,
             )
+
+        # Per-row labels on the left (one per ref + sequence row)
+        if show_row_labels:
+            label_x = -1.0
+            ax.text(
+                label_x,
+                y0,
+                panel.label,
+                ha="right",
+                va="center",
+                fontproperties=mono_sm,
+                color=PANEL_LABEL_COLOR,
+                fontweight="bold",
+            )
+            for ri, (name, _row, _is_rev) in enumerate(panel.seq_rows):
+                ax.text(
+                    label_x,
+                    y0 + 1 + ri,
+                    name,
+                    ha="right",
+                    va="center",
+                    fontproperties=mono_sm,
+                    color=PANEL_LABEL_COLOR,
+                )
 
         # Separator line between panels
         if pi < len(panels) - 1:
@@ -294,6 +334,8 @@ def render_panels(
     palette: str = "nt",
     cell: float | None = None,
     classic: bool = False,
+    show_row_labels: bool = False,
+    row_label_width: float = 8.0,
 ) -> None:
     """Render alignment panels to a publication-quality image file.
 
@@ -314,9 +356,20 @@ def render_panels(
         classic: When True, render in black-and-white with no color highlighting.
     """
     fig_w, fig_h = panel_figsize(panels, fontsize, cell)
+    if show_row_labels:
+        if cell is None:
+            cell = fontsize / 72
+        fig_w += row_label_width * cell
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     draw_panels(
-        panels, ax, fontsize=fontsize, palette=palette, cell=cell, classic=classic
+        panels,
+        ax,
+        fontsize=fontsize,
+        palette=palette,
+        cell=cell,
+        classic=classic,
+        show_row_labels=show_row_labels,
+        row_label_width=row_label_width,
     )
     plt.subplots_adjust(left=0.01, right=0.99, top=0.92, bottom=0.01)
     plt.savefig(

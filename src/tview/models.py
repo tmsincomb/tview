@@ -39,3 +39,5 @@ class Panel:
     total_cols: int
     col_labels: list[tuple[int, str]]
     ins_columns: set[int] = field(default_factory=set)
+    secondary_ref_row: list[str] | None = None
+    heterologous_color: str = "#FF6F00"
