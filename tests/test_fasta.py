@@ -195,6 +195,29 @@ class TestFastaPanel:
         label_positions = {lbl for _, lbl in panel.col_labels}
         assert "1" in label_positions
 
+    def test_max_rows_truncates(self, tmp_path):
+        """max_rows keeps reference + first N non-reference sequences."""
+        path = tmp_path / "many.fasta"
+        body = ">ref\nACGT\n" + "".join(f">s{i}\nACGT\n" for i in range(10))
+        path.write_text(body)
+        panel = fasta_panel(str(path), max_rows=3)
+        assert len(panel.seq_rows) == 3
+        assert [name for name, _, _ in panel.seq_rows] == ["s0", "s1", "s2"]
+
+    def test_max_rows_none_keeps_all(self, tmp_path):
+        path = tmp_path / "many.fasta"
+        body = ">ref\nACGT\n" + "".join(f">s{i}\nACGT\n" for i in range(5))
+        path.write_text(body)
+        panel = fasta_panel(str(path))
+        assert len(panel.seq_rows) == 5
+
+    def test_max_rows_zero_keeps_only_reference(self, tmp_path):
+        path = tmp_path / "many.fasta"
+        body = ">ref\nACGT\n>s0\nACGT\n>s1\nACGT\n"
+        path.write_text(body)
+        panel = fasta_panel(str(path), max_rows=0)
+        assert panel.seq_rows == []
+
 
 # ── render_panels tests ───────────────────────────────────────────
 

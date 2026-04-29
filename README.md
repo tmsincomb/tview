@@ -16,6 +16,9 @@ Supports **BAM files** (with reference FASTA), **pre-aligned FASTA** (e.g. MAFFT
 ![Classic mode](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/fasta_env_classic.png)
 *Classic mode — black-and-white rendering for textbook-style figures and grayscale print*
 
+![Dual reference HxB2 + SF162p3_ref](https://raw.githubusercontent.com/tmsincomb/tview/main/examples/fasta_env_dual_ref.png)
+*Dual-reference mode — variant calls against `SF162p3_ref` (bottom row + bottom x-axis) with `HxB2` numbering (top row + top x-axis). Different gap patterns mean position 10 on each axis lands in a different alignment column.*
+
 ---
 
 ## Installation
@@ -73,6 +76,54 @@ tview \
   --palette aa \
   --classic-mode \
   -o classic_output.png
+```
+
+---
+
+## Dual Reference (Heterologous MSA)
+
+For heterologous MSAs (e.g. HIV with HxB2 + multiple strains + reads), the variant-call reference and the x-axis numbering reference do not have to be the same sequence. `--variant-ref` selects the FASTA header against which mismatches are colored; `--numbering-ref` selects the FASTA header whose non-gap positions label the x-axis.
+
+When both are set and differ:
+
+- Both refs render as rows at the top (numbering ref first, variant ref second).
+- A second x-axis is drawn at the bottom of the figure for the variant-ref's coordinates.
+- The top axis carries the numbering ref's coordinates with a `(<numbering_ref>)` annotation; the bottom axis carries the variant ref's coordinates with a `(<variant_ref>)` annotation.
+- Per-row labels are auto-enabled so you can tell the two top rows apart.
+- `--max-rows N` counts samples only — references are always shown.
+
+```bash
+tview \
+  --fasta env_protein_aligned.fasta \
+  --palette aa \
+  --columns 1-60 \
+  --variant-ref SF162p3_ref \
+  --numbering-ref HxB2 \
+  --max-rows 6 \
+  -o env_dual_ref.png
+```
+
+Gap patterns differ between strains — HxB2 position 10 and SF162p3_ref position 10 typically land on different alignment columns. That's the point: both axes complement each other.
+
+### Per-row labels
+
+Show sequence IDs to the left of each row (auto-enabled in dual-ref mode):
+
+```bash
+tview --fasta aligned.fasta --show-row-labels -o labeled.png
+```
+
+### Tick frequency
+
+Default labels are placed at non-gap positions 1, 10, 20, 30, ... Use `--tick-every N` to change the interval. `--tick-every 1` labels every column — useful for short alignments or when exact position readout matters.
+
+```bash
+tview \
+  --fasta env_protein_aligned.fasta \
+  --variant-ref SF162p3_ref --numbering-ref HxB2 \
+  --columns 1-60 --max-rows 6 \
+  --tick-every 1 \
+  -o env_dual_ref_per_column.png
 ```
 
 ---
@@ -164,6 +215,34 @@ render_panels(panels, "stacked.png", dpi=300, fontsize=7, cell=0.14)
 # Classic (black-and-white) mode
 panel = fasta_panel("aligned.fasta")
 render_panels([panel], "classic.png", palette="aa", classic=True)
+
+# Dual-reference: variant calls against SF162p3, x-axis numbered by HxB2
+panel = fasta_panel(
+    "env_protein_aligned.fasta",
+    columns=list(range(1, 61)),
+    variant_ref="SF162p3_ref",
+    numbering_ref="HxB2",
+    max_rows=6,
+)
+render_panels([panel], "dual_ref.png", palette="aa", show_row_labels=True)
+
+# Per-column tick labels
+panel = fasta_panel("aligned.fasta", tick_every=1)
+render_panels([panel], "per_col.png", palette="aa")
+
+# Heterologous orange highlight (separate from dual-ref)
+# Sample bases that mismatch ref_row but match secondary_ref_row render in orange + bold.
+from tview.models import Panel
+panel = fasta_panel("aligned.fasta")
+panel = Panel(
+    label=panel.label,
+    ref_row=panel.ref_row,
+    seq_rows=panel.seq_rows,
+    total_cols=panel.total_cols,
+    col_labels=panel.col_labels,
+    secondary_ref_row=list("..."),  # other strain aligned to same grid
+)
+render_panels([panel], "hetero.png", palette="aa")
 ```
 
 ---
@@ -227,6 +306,7 @@ plt.savefig("side_by_side.png", dpi=300, bbox_inches="tight")
 | Match (reverse) | `,` | light grey, reduced opacity |
 | Mismatch | `A` `T` etc. | colored, yellow highlight, bold |
 | Mismatch (reverse) | `a` `t` etc. | lowercase, colored, yellow highlight |
+| Heterologous match | `A` `T` etc. | orange `#FF6F00`, bold, yellow highlight (mismatches `ref_row` but matches `secondary_ref_row`) |
 | Deletion | `-` | grey dash |
 | Insertion | colored bases | purple column shading |
 | Gap (ref in insertion col) | `-` | grey dash |
@@ -269,13 +349,19 @@ Options:
   --ref PATH              Reference FASTA (required for BAM mode).
   --region TEXT            Genomic region chr:start-end (required for BAM mode).
   --fasta TEXT             Aligned FASTA file(s) — each becomes a panel. Use '-' for stdin.
-  --columns TEXT           Column range for FASTA, 1-based inclusive (e.g. 1-120).
+  --columns TEXT           Column positions for FASTA, 1-based (e.g. 1-120, 5,40,690, or 5,10-20,40).
   -o, --output TEXT        Output image path.  [default: alignment.png]
   --palette [nt|aa]        Color palette.  [default: nt]
   --dpi INTEGER            Image resolution.  [default: 300]
   --fontsize INTEGER       Base font size in points.  [default: 7]
   --cell FLOAT             Cell size in inches.  [default: 0.14]
   --classic-mode           Black-and-white rendering with no color highlighting.
+  --show                   Display rendered image inline via 'kitten icat' (Kitty/Ghostty).
+  --max-rows INTEGER       Cap sample rows (FASTA) or reads (BAM) per panel.
+  --variant-ref TEXT       FASTA header for variant calling (mismatches drawn against this).
+  --numbering-ref TEXT     FASTA header for x-axis numbering. Renders as second top row + bottom axis when different from --variant-ref.
+  --show-row-labels        Show sequence ID labels on the left of each row.
+  --tick-every INTEGER     Label every Nth x-axis position. Use 1 for every column.  [default: 10]
   -h, --help               Show this message and exit.
 ```
 
@@ -285,13 +371,19 @@ Options:
 | `--ref` | Reference FASTA (required for BAM mode) | — |
 | `--region` | Genomic region `chr:start-end` (required for BAM) | — |
 | `--fasta` | Aligned FASTA file(s), each becomes a panel. Use `-` for stdin. | — |
-| `--columns` | Column range for FASTA, 1-based inclusive (e.g. `1-120`) | full alignment |
+| `--columns` | Column positions for FASTA, 1-based. Supports `1-120`, `5,40,690`, or `5,10-20,40`. | full alignment |
 | `-o, --output` | Output image path | `alignment.png` |
 | `--palette` | Color palette: `nt` or `aa` | `nt` |
 | `--dpi` | Image resolution | `300` |
 | `--fontsize` | Base font size in points | `7` |
 | `--cell` | Cell size in inches (controls spacing) | `0.14` |
 | `--classic-mode` | Black-and-white rendering with no color highlighting | `False` |
+| `--show` | Display via `kitten icat` (Kitty/Ghostty) | `False` |
+| `--max-rows` | Cap sample rows (FASTA) or reads (BAM) per panel. In dual-ref mode, refs are always shown. | — |
+| `--variant-ref` | (FASTA) Header name used as variant-call reference. Mismatches drawn against this row. | first sequence |
+| `--numbering-ref` | (FASTA) Header name used for x-axis numbering. Renders as second top row + bottom axis when different from `--variant-ref`. | same as `--variant-ref` |
+| `--show-row-labels` | Show sequence ID labels on the left of each row. Auto-enabled when `--variant-ref` and `--numbering-ref` differ. | `False` |
+| `--tick-every` | Label every Nth x-axis position. Use `1` to label every column. | `10` |
 
 ---
 
@@ -330,4 +422,6 @@ MRVKGIRKNAQHL----WRGGTLLLGMLMICS...
 --------------------------MLMICS...
 ```
 
-The x-axis labels count non-gap positions in the reference sequence (1, 10, 20, ...), so position numbers always correspond to the reference residue numbering regardless of gap columns.
+The x-axis labels count non-gap positions in the reference sequence (1, 10, 20, ...) so position numbers always correspond to the reference residue numbering regardless of gap columns. The interval is configurable via `--tick-every N`.
+
+Pass `--variant-ref <name>` to pick a non-first sequence as the reference for variant calling. Pass `--numbering-ref <name>` to layer a second reference whose non-gap positions drive an additional x-axis (typical HIV use case: HxB2 numbering with variant calls against a different strain).

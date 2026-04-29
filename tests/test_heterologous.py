@@ -100,6 +100,49 @@ class TestRowLabels:
         assert out.exists()
 
 
+class TestSecondaryRefWithChosenVariantRef:
+    """Guard regression: orange highlight still fires when variant_ref is
+    not the first sequence in the FASTA."""
+
+    def test_secondary_ref_with_variant_ref_chosen(self, write_fasta, output_dir):
+        # FASTA layout:
+        #   first      = first sequence (would be ref by default; not picked here)
+        #   target     = chosen as variant_ref → becomes ref_row
+        #   sample     = the row to compare
+        # We then attach a separate secondary_ref_row (orange highlight).
+        path = write_fasta(
+            [
+                ("first", "AAAAAAAA"),
+                ("target", "ACGTACGT"),
+                (
+                    "sample",
+                    "ACGGACGT",
+                ),  # mismatch at pos 2 (G vs T) — matches secondary
+            ]
+        )
+        panel = fasta_panel(str(path), variant_ref="target")
+        # Variant ref selection must work even when not first.
+        assert panel.ref_row == list("ACGTACGT")
+        names = [n for n, _r, _rev in panel.seq_rows]
+        assert "first" in names
+        assert "sample" in names
+        assert "target" not in names
+
+        # Attach secondary row that matches the sample's mismatch base.
+        secondary = list("ACGGACGT")
+        panel = Panel(
+            label=panel.label,
+            ref_row=panel.ref_row,
+            seq_rows=panel.seq_rows,
+            total_cols=panel.total_cols,
+            col_labels=panel.col_labels,
+            secondary_ref_row=secondary,
+        )
+        out = output_dir / "secondary_with_chosen_variant_ref.png"
+        render_panels([panel], str(out), palette="aa", dpi=100)
+        assert out.exists()
+
+
 class TestEndToEnd:
     def test_fasta_panel_roundtrip(self, write_fasta, output_dir):
         # End-to-end: build via fasta_panel, attach secondary, render
