@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import sys
+from pathlib import Path
 
 import click
 
@@ -44,6 +47,31 @@ def parse_columns(columns: str) -> list[int]:
         else:
             positions.add(int(part))
     return sorted(positions)
+
+
+def _show_in_terminal(output_path: str | Path) -> None:
+    """Display a rendered image inline via ``kitten icat``.
+
+    Works in terminals that implement the kitty graphics protocol
+    (Kitty, Ghostty). Prints a soft warning to stderr if ``kitten`` is
+    not on PATH — the file has already been written, so the render
+    itself is not considered failed.
+
+    Args:
+        output_path: Path to the image file just rendered.
+    """
+    kitten = shutil.which("kitten")
+    if not kitten:
+        click.echo(
+            f"--show requires 'kitten' on PATH (install kitty). "
+            f"Image saved to: {output_path}",
+            err=True,
+        )
+        return
+    subprocess.run(
+        [kitten, "icat", "--align", "left", str(output_path)],
+        check=False,
+    )
 
 
 def _expand_stdin(paths: list[str]) -> list[str]:
@@ -124,8 +152,69 @@ def _expand_stdin(paths: list[str]) -> list[str]:
     default=False,
     help="Black-and-white rendering with no color highlighting.",
 )
+@click.option(
+    "--show",
+    is_flag=True,
+    default=False,
+    help="Display rendered image inline via 'kitten icat' (Kitty/Ghostty).",
+)
+@click.option(
+    "--max-rows",
+    type=int,
+    default=None,
+    help="Cap non-reference rows (FASTA) or reads (BAM) per panel.",
+)
+@click.option(
+    "--variant-ref",
+    default=None,
+    help="FASTA header name for variant calling (mismatches drawn against this). "
+    "Default: first sequence.",
+)
+@click.option(
+    "--numbering-ref",
+    default=None,
+    help="FASTA header name for x-axis numbering. When different from "
+    "--variant-ref, both refs are shown as rows and two x-axes are drawn.",
+)
+@click.option(
+    "--show-row-labels",
+    is_flag=True,
+    default=False,
+    help="Show sequence ID labels on the left of each row.",
+)
+@click.option(
+    "--tick-every",
+    type=int,
+    default=10,
+    show_default=True,
+    help="Label every Nth x-axis position. Use 1 to label every column.",
+)
+@click.option(
+    "--per-panel-axes",
+    is_flag=True,
+    default=False,
+    help="In multi-panel mode, draw x-axis tick labels above (and below "
+    "for dual-ref panels) each panel instead of only at the figure edges.",
+)
 def main(
-    bam, ref, region, fasta, columns, output, palette, dpi, fontsize, cell, classic_mode
+    bam,
+    ref,
+    region,
+    fasta,
+    columns,
+    output,
+    palette,
+    dpi,
+    fontsize,
+    cell,
+    classic_mode,
+    show,
+    max_rows,
+    variant_ref,
+    numbering_ref,
+    show_row_labels,
+    tick_every,
+    per_panel_axes,
 ):
     """Publication-quality alignment viewer (BAM or FASTA).
 
@@ -143,13 +232,43 @@ def main(
     if bam_paths:
         if not ref or not region:
             raise click.UsageError("--ref and --region are required for BAM input")
+        if variant_ref or numbering_ref:
+            click.echo(
+                "warning: --variant-ref/--numbering-ref are FASTA-only and were ignored",
+                err=True,
+            )
         for bam_path in bam_paths:
-            panels.append(bam_panel(bam_path, ref, region))
+            panels.append(
+                bam_panel(
+                    bam_path,
+                    ref,
+                    region,
+                    max_rows=max_rows,
+                    tick_every=tick_every,
+                )
+            )
 
     if fasta_paths:
         cols = parse_columns(columns) if columns else None
         for fasta_path in fasta_paths:
-            panels.append(fasta_panel(fasta_path, columns=cols))
+            try:
+                panels.append(
+                    fasta_panel(
+                        fasta_path,
+                        columns=cols,
+                        max_rows=max_rows,
+                        variant_ref=variant_ref,
+                        numbering_ref=numbering_ref,
+                        tick_every=tick_every,
+                    )
+                )
+            except ValueError as exc:
+                raise click.UsageError(str(exc)) from exc
+
+    # Auto-enable per-row labels when dual-ref mode is active (different refs).
+    effective_show_row_labels = show_row_labels or bool(
+        variant_ref and numbering_ref and variant_ref != numbering_ref
+    )
 
     render_panels(
         panels,
@@ -159,4 +278,9 @@ def main(
         palette=palette,
         cell=cell,
         classic=classic_mode,
+        show_row_labels=effective_show_row_labels,
+        per_panel_axes=per_panel_axes,
     )
+
+    if show:
+        _show_in_terminal(output)

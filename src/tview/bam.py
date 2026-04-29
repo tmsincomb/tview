@@ -73,7 +73,13 @@ def build_read_row(
     return aligned, inserts
 
 
-def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
+def bam_panel(
+    bam_path: str | Path,
+    ref_path: str | Path,
+    region: str,
+    max_rows: int | None = None,
+    tick_every: int = 10,
+) -> Panel:
     """Build a Panel from a BAM file with reference FASTA and genomic region.
 
     Reads are sorted by start position and strand. Insertion columns are
@@ -83,6 +89,8 @@ def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
         bam_path: Path to the indexed BAM file.
         ref_path: Path to the reference FASTA (must be indexed).
         region: Genomic region string in "chrom:start-end" format (0-based start).
+        max_rows: Maximum number of reads to include (after sort). When
+            ``None``, no limit.
 
     Returns:
         A Panel with reference row, read rows, insertion columns, and tick labels.
@@ -102,6 +110,9 @@ def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
             if not r.is_unmapped and r.cigartuples
         ]
     reads.sort(key=lambda r: (r.reference_start, r.is_reverse))
+
+    if max_rows is not None and max_rows >= 0:
+        reads = reads[:max_rows]
 
     # Find max insertion at each ref position
     max_ins: dict[int, int] = defaultdict(int)
@@ -150,9 +161,12 @@ def bam_panel(bam_path: str | Path, ref_path: str | Path, region: str) -> Panel:
                         row[c + 1 + j] = "-"
         seq_rows.append((read.query_name, row, read.is_reverse))
 
-    # Column labels: 1-based relative, ticks at 1, 10, 20...
+    # Column labels: 1-based relative, ticks every `tick_every` positions.
     ref_width = end - start
-    tick_1based = [1] + list(range(10, ref_width + 1, 10))
+    if tick_every <= 1:
+        tick_1based = list(range(1, ref_width + 1))
+    else:
+        tick_1based = [1] + list(range(tick_every, ref_width + 1, tick_every))
     col_labels = [
         (col_map[start + p - 1], str(p)) for p in tick_1based if (start + p - 1) < end
     ]
