@@ -189,7 +189,10 @@ class TestCLI:
         seqs = [("ref", "ACGT"), ("s1", "ACCT")]
         fasta_path = write_fasta(seqs)
         out = OUTPUT_DIR / "cli_show_missing.png"
-        runner = CliRunner()
+        try:
+            runner = CliRunner(mix_stderr=False)
+        except TypeError:
+            runner = CliRunner()
         result = runner.invoke(
             main,
             [
@@ -204,7 +207,11 @@ class TestCLI:
         )
         assert result.exit_code == 0
         assert out.exists()
-        assert "kitten" in result.stderr
+        try:
+            stderr_text = result.stderr
+        except ValueError:
+            stderr_text = ""
+        assert "kitten" in stderr_text or "kitten" in result.output
 
     def test_max_rows_limits_fasta(self, write_fasta):
         seqs = [("ref", "ACGT")] + [(f"s{i}", "ACCT") for i in range(10)]
